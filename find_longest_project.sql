@@ -1,11 +1,19 @@
-ALTER TABLE project ADD COLUMN "name" VARCHAR(255);
-
-UPDATE project SET "name" = CONCAT('Project ', UPPER(to_hex(id))) WHERE "name" IS NULL;
-
-ALTER TABLE project ALTER COLUMN "name" SET NOT NULL;
-
-SELECT p."name", ((p.finish_date - p.start_date) / 30) month_count 
-  FROM project p 
-	WHERE p.finish_date notnull AND ((p.finish_date - p.start_date) / 30) = (
-		SELECT Max(month_count) 
-		FROM (SELECT ((p.finish_date - p.start_date) / 30) month_count FROM project p));
+SELECT "name", month_count 
+FROM (SELECT *, 
+	CASE 
+		WHEN finish_date IS NULL THEN (EXTRACT(YEAR FROM AGE(CURRENT_DATE, start_date)) * 12 + 
+			  EXTRACT(MONTH FROM AGE(CURRENT_DATE, start_date))) 
+	    ELSE (EXTRACT(YEAR FROM AGE(finish_date, start_date)) * 12 + 
+			  EXTRACT(MONTH FROM AGE(finish_date, start_date)))
+	    END month_count
+	FROM project) 
+WHERE month_count = (
+	SELECT MAX(month_count) 
+	FROM (SELECT  
+		CASE 
+			WHEN finish_date IS NULL THEN (EXTRACT(YEAR FROM AGE(CURRENT_DATE, start_date)) * 12 + 
+				  EXTRACT(MONTH FROM AGE(CURRENT_DATE, start_date))) 
+		    ELSE (EXTRACT(YEAR FROM AGE(finish_date, start_date)) * 12 + 
+				  EXTRACT(MONTH FROM AGE(finish_date, start_date)))
+		    END month_count
+		FROM project));
